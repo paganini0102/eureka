@@ -13,6 +13,11 @@ public class Archaius1VipAddressResolver implements VipAddressResolver {
 
     private static final Pattern VIP_ATTRIBUTES_PATTERN = Pattern.compile("\\$\\{(.*?)\\}");
 
+    /**
+     * 将VIP地址里的${(.*?)}查找配置文件里的键值进行替换
+     * @param vipAddressMacro the macro for which the interpolation needs to be made.
+     * @return
+     */
     @Override
     public String resolveDeploymentContextBasedVipAddresses(String vipAddressMacro) {
         if (vipAddressMacro == null) {
@@ -21,7 +26,7 @@ public class Archaius1VipAddressResolver implements VipAddressResolver {
 
         String result = vipAddressMacro;
 
-        Matcher matcher = VIP_ATTRIBUTES_PATTERN.matcher(result);
+        Matcher matcher = VIP_ATTRIBUTES_PATTERN.matcher(result); // 替换表达式
         while (matcher.find()) {
             String key = matcher.group(1);
             String value = DynamicPropertyFactory.getInstance().getStringProperty(key, "").get();

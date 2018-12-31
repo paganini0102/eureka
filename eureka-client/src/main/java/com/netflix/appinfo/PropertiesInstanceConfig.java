@@ -49,9 +49,11 @@ import static com.netflix.appinfo.PropertyBasedInstanceConfigConstants.*;
  *
  */
 public abstract class PropertiesInstanceConfig extends AbstractInstanceConfig implements EurekaInstanceConfig {
-
+    /** 命名空间 */
     protected final String namespace;
+    /** 配置文件对象 */
     protected final DynamicPropertyFactory configInstance;
+    /** 应用分组（从环境变量获取） */
     private String appGrpNameFromEnv;
 
     public PropertiesInstanceConfig() {
@@ -69,15 +71,15 @@ public abstract class PropertiesInstanceConfig extends AbstractInstanceConfig im
 
     public PropertiesInstanceConfig(String namespace, DataCenterInfo info) {
         super(info);
-
+        // 设置 namespace，为 "." 结尾
         this.namespace = namespace.endsWith(".")
                 ? namespace
                 : namespace + ".";
-
+        // 从环境变量获取应用分组
         appGrpNameFromEnv = ConfigurationManager.getConfigInstance()
                 .getString(FALLBACK_APP_GROUP_KEY, Values.UNKNOWN_APPLICATION);
 
-        this.configInstance = Archaius1Utils.initConfig(CommonConstants.CONFIG_FILE_NAME);
+        this.configInstance = Archaius1Utils.initConfig(CommonConstants.CONFIG_FILE_NAME); // 初始化配置文件对象
     }
 
     /*
