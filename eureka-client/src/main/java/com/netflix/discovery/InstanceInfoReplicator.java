@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * 应用实例信息复制器
  * A task for updating and replicating the local instanceinfo to the remote server. Properties of this task are:
  * - configured with a single update thread to guarantee sequential update to the remote server
  * - update tasks can be scheduled on-demand via onDemandUpdate()
@@ -28,13 +29,16 @@ class InstanceInfoReplicator implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(InstanceInfoReplicator.class);
 
     private final DiscoveryClient discoveryClient;
+    /** 应用实例信息 */
     private final InstanceInfo instanceInfo;
-
+    /** 定时执行频率（单位：秒） */
     private final int replicationIntervalSeconds;
     private final ScheduledExecutorService scheduler;
+    /** 定时执行任务的Future */
     private final AtomicReference<Future> scheduledPeriodicRef;
-
+    /** 是否开启调度 */
     private final AtomicBoolean started;
+    /** 限流相关 */
     private final RateLimiter rateLimiter;
     private final int burstSize;
     private final int allowedRatePerMinute;
@@ -61,7 +65,9 @@ class InstanceInfoReplicator implements Runnable {
 
     public void start(int initialDelayMs) {
         if (started.compareAndSet(false, true)) {
+            // 设置应用实例信息数据不一致
             instanceInfo.setIsDirty();  // for initial register
+            // 提交任务，并设置该任务的Future
             Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS);
             scheduledPeriodicRef.set(next);
         }
@@ -97,17 +103,17 @@ class InstanceInfoReplicator implements Runnable {
 
     public void run() {
         try {
-            discoveryClient.refreshInstanceInfo();
+            discoveryClient.refreshInstanceInfo(); // 刷新应用实例信息
 
-            Long dirtyTimestamp = instanceInfo.isDirtyWithTime();
+            Long dirtyTimestamp = instanceInfo.isDirtyWithTime(); // 判断应用实例信息是否数据不一致
             if (dirtyTimestamp != null) {
-                discoveryClient.register();
-                instanceInfo.unsetIsDirty(dirtyTimestamp);
+                discoveryClient.register(); // 发起注册
+                instanceInfo.unsetIsDirty(dirtyTimestamp); // 设置应用实例信息数据一致
             }
         } catch (Throwable t) {
             logger.warn("There was a problem with the instance info replicator", t);
         } finally {
-            Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS);
+            Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS);  // 提交任务，并设置该任务的Future
             scheduledPeriodicRef.set(next);
         }
     }

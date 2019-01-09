@@ -1161,7 +1161,7 @@ public class InstanceInfo {
         if (this.status != status) {
             InstanceStatus prev = this.status;
             this.status = status;
-            setIsDirty();
+            setIsDirty(); // 设置应用实例信息数据一致
             return prev;
         }
         return null;
