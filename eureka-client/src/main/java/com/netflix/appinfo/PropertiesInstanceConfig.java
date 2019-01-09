@@ -28,6 +28,7 @@ import org.apache.commons.configuration.Configuration;
 import static com.netflix.appinfo.PropertyBasedInstanceConfigConstants.*;
 
 /**
+ * 基于配置文件的Eureka应用实例配置抽象基类
  * A properties based {@link InstanceInfo} configuration.
  *
  * <p>
