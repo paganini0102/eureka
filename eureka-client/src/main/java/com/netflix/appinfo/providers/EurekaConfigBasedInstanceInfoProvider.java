@@ -55,13 +55,11 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                 vipAddressResolver = new Archaius1VipAddressResolver();
             }
 
-            // 创建应用实例信息构建器
             // Builder the instance information to be registered with eureka server
-            InstanceInfo.Builder builder = InstanceInfo.Builder.newBuilder(vipAddressResolver);
+            InstanceInfo.Builder builder = InstanceInfo.Builder.newBuilder(vipAddressResolver); // 创建应用实例信息构建器
 
-            // 应用实例编号
             // set the appropriate id for the InstanceInfo, falling back to datacenter Id if applicable, else hostname
-            String instanceId = config.getInstanceId();
+            String instanceId = config.getInstanceId(); // 应用实例编号
             DataCenterInfo dataCenterInfo = config.getDataCenterInfo();
             if (instanceId == null || instanceId.isEmpty()) {
                 if (dataCenterInfo instanceof UniqueIdentifier) {
@@ -115,7 +113,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                          InstanceStatus.UP);
             }
 
-            // 设置应用实例信息构建器的元数据( Metadata )集合
+            // 设置应用实例信息构建器的元数据（Metadata）集合
             // Add any user-specific metadata information
             for (Map.Entry<String, String> mapEntry : config.getMetadataMap().entrySet()) {
                 String key = mapEntry.getKey();
