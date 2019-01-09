@@ -79,19 +79,19 @@ class InstanceInfoReplicator implements Runnable {
     }
 
     public boolean onDemandUpdate() {
-        if (rateLimiter.acquire(burstSize, allowedRatePerMinute)) {
+        if (rateLimiter.acquire(burstSize, allowedRatePerMinute)) { // 限流判断
             scheduler.submit(new Runnable() {
                 @Override
                 public void run() {
                     logger.debug("Executing on-demand update of local InstanceInfo");
 
-                    Future latestPeriodic = scheduledPeriodicRef.get();
+                    Future latestPeriodic = scheduledPeriodicRef.get(); // 取消任务
                     if (latestPeriodic != null && !latestPeriodic.isDone()) {
                         logger.debug("Canceling the latest scheduled update, it will be rescheduled at the end of on demand update");
                         latestPeriodic.cancel(false);
                     }
 
-                    InstanceInfoReplicator.this.run();
+                    InstanceInfoReplicator.this.run(); // 再次调用
                 }
             });
             return true;

@@ -1377,10 +1377,10 @@ public class DiscoveryClient implements EurekaClient {
      * isDirty flag on the instanceInfo is set to true
      */
     void refreshInstanceInfo() {
-        applicationInfoManager.refreshDataCenterInfoIfRequired();
-        applicationInfoManager.refreshLeaseInfoIfRequired();
+        applicationInfoManager.refreshDataCenterInfoIfRequired(); // 刷新数据中心信息
+        applicationInfoManager.refreshLeaseInfoIfRequired(); // 刷新租约信息
 
-        InstanceStatus status;
+        InstanceStatus status; // 健康检查
         try {
             status = getHealthCheckHandler().getStatus(instanceInfo.getStatus());
         } catch (Exception e) {
