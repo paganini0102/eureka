@@ -821,6 +821,7 @@ public class DiscoveryClient implements EurekaClient {
     }
 
     /**
+     * 触发调用注册
      * Register with the eureka service by making the appropriate REST call.
      */
     boolean register() throws Throwable {
@@ -839,6 +840,7 @@ public class DiscoveryClient implements EurekaClient {
     }
 
     /**
+     * 服务续约
      * Renew with the eureka service by making the appropriate REST call
      */
     boolean renew() {
@@ -1256,7 +1258,7 @@ public class DiscoveryClient implements EurekaClient {
                             expBackOffBound,
                             new CacheRefreshThread()
                     ),
-                    registryFetchIntervalSeconds, TimeUnit.SECONDS);
+                    registryFetchIntervalSeconds, TimeUnit.SECONDS); // 服务获取定时任务
         }
 
         if (clientConfig.shouldRegisterWithEureka()) {
@@ -1275,9 +1277,12 @@ public class DiscoveryClient implements EurekaClient {
                             expBackOffBound,
                             new HeartbeatThread()
                     ),
-                    renewalIntervalInSecs, TimeUnit.SECONDS);
+                    renewalIntervalInSecs, TimeUnit.SECONDS); // 服务续约定时任务
 
-            // 创建应用实例信息复制器
+            /**
+             * 创建应用实例信息复制器
+             * 内部会执行一个定时任务，而这个定时任务的具体是触发调用注册
+             */
             // InstanceInfo replicator
             instanceInfoReplicator = new InstanceInfoReplicator(
                     this,
