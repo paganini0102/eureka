@@ -1053,7 +1053,7 @@ public class DiscoveryClient implements EurekaClient {
         logger.info("Getting all instance registry info from the eureka server");
 
         Applications apps = null;
-        // 调用到EurekaServer的ApplicationsResource-getContainers()方法全量获取注册信息
+        // 调用到EurekaServer的ApplicationsResource的getContainers()方法全量获取注册信息
         EurekaHttpResponse<Applications> httpResponse = clientConfig.getRegistryRefreshSingleVipAddress() == null
                 ? eurekaTransport.queryClient.getApplications(remoteRegionsRef.get())
                 : eurekaTransport.queryClient.getVip(clientConfig.getRegistryRefreshSingleVipAddress(), remoteRegionsRef.get());
@@ -1077,6 +1077,7 @@ public class DiscoveryClient implements EurekaClient {
     }
 
     /**
+     * 差别获取后合并到本地缓存
      * Get the delta registry information from the eureka server and update it locally.
      * When applying the delta, the following flow is observed:
      *
@@ -1093,12 +1094,17 @@ public class DiscoveryClient implements EurekaClient {
         long currentUpdateGeneration = fetchRegistryGeneration.get();
 
         Applications delta = null;
+        /**
+         * 发送差别获取注册信息的请求
+         * 具体通过AbstractJerseyEurekaHttpClient的getApplicationsInternal(urlPath, regions)方法调用
+         * 最终调用到EurekaServer中ApplicationsResource的getContainerDifferential()方法，目测和获取全量注册信息差别不大
+         */
         EurekaHttpResponse<Applications> httpResponse = eurekaTransport.queryClient.getDelta(remoteRegionsRef.get());
         if (httpResponse.getStatusCode() == Status.OK.getStatusCode()) {
             delta = httpResponse.getEntity();
         }
 
-        if (delta == null) {
+        if (delta == null) { // 差别获取注册信息未获取到，转为全量获取
             logger.warn("The server does not allow the delta revision to be applied because it is not safe. "
                     + "Hence got the full registry.");
             getAndStoreFullRegistry();
