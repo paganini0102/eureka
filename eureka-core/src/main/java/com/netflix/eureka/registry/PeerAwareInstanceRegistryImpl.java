@@ -403,12 +403,12 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      */
     @Override
     public void register(final InstanceInfo info, final boolean isReplication) {
-        int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS;
-        if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) {
+        int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS; // 默认租约有效时间为90秒
+        if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) { // 自己设置的租约有效时间
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
-        super.register(info, leaseDuration, isReplication);
-        replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication);
+        super.register(info, leaseDuration, isReplication); // 注册
+        replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication); // 注册信息复制到其他EurekaServer节点
     }
 
     /*
@@ -418,7 +418,11 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * java.lang.String, long, boolean)
      */
     public boolean renew(final String appName, final String id, final boolean isReplication) {
-        if (super.renew(appName, id, isReplication)) {
+        if (super.renew(appName, id, isReplication)) { // 调用父类里的renew(appName, id, isReplication)方法续约
+            /**
+             * 如果是续约请求则向其他EurekaServer节点同步续约信息
+             * 如果是同步信息请求则直接返回
+             */
             replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication);
             return true;
         }

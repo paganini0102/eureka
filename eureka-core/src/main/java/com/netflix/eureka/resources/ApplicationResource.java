@@ -130,6 +130,7 @@ public class ApplicationResource {
     }
 
     /**
+     * 注册实例到EurekaServer
      * Registers information about a particular instance for an
      * {@link com.netflix.discovery.shared.Application}.
      *
@@ -145,7 +146,7 @@ public class ApplicationResource {
                                 @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
         logger.debug("Registering instance {} (replication={})", info.getId(), isReplication);
         // validate that the instanceinfo contains all the necessary required fields
-        if (isBlank(info.getId())) {
+        if (isBlank(info.getId())) { // 参数校验
             return Response.status(400).entity("Missing instanceId").build();
         } else if (isBlank(info.getHostName())) {
             return Response.status(400).entity("Missing hostname").build();
@@ -182,6 +183,12 @@ public class ApplicationResource {
             }
         }
 
+        /**
+         *  进行注册并判断是否向其他EurekaServer节点进行注册信息传播
+         *  EurekaServer既可以是同步信息操作的发起者也可以是同步信息请求的接收者
+         *  isReplication为false的时候，为第一次请求，不向其他EurekaServer节点同步信息
+         *  isReplication为true的时候，为其他EurekaServer节点向当前节发起同步信息请求
+         */
         registry.register(info, "true".equals(isReplication));
         return Response.status(204).build();  // 204 to be backwards compatible
     }

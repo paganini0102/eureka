@@ -346,12 +346,12 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      */
     public boolean renew(String appName, String id, boolean isReplication) {
         RENEW.increment(isReplication);
-        Map<String, Lease<InstanceInfo>> gMap = registry.get(appName);
+        Map<String, Lease<InstanceInfo>> gMap = registry.get(appName); // 根据实例名称取出实例信息集合
         Lease<InstanceInfo> leaseToRenew = null;
-        if (gMap != null) {
+        if (gMap != null) { // 根据实例id取出具体实例租约信息
             leaseToRenew = gMap.get(id);
         }
-        if (leaseToRenew == null) {
+        if (leaseToRenew == null) { // 租约不存在
             RENEW_NOT_FOUND.increment(isReplication);
             logger.warn("DS: Registry: lease doesn't exist, registering resource: {} - {}", appName, id);
             return false;
@@ -360,25 +360,25 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             if (instanceInfo != null) {
                 // touchASGCache(instanceInfo.getASGName());
                 InstanceStatus overriddenInstanceStatus = this.getOverriddenInstanceStatus(
-                        instanceInfo, leaseToRenew, isReplication);
-                if (overriddenInstanceStatus == InstanceStatus.UNKNOWN) {
+                        instanceInfo, leaseToRenew, isReplication); // 获得实例的覆盖状态
+                if (overriddenInstanceStatus == InstanceStatus.UNKNOWN) { // 实例覆盖状态为UNKNOWN，续租失败
                     logger.info("Instance status UNKNOWN possibly due to deleted override for instance {}"
                             + "; re-register required", instanceInfo.getId());
                     RENEW_NOT_FOUND.increment(isReplication);
                     return false;
                 }
-                if (!instanceInfo.getStatus().equals(overriddenInstanceStatus)) {
+                if (!instanceInfo.getStatus().equals(overriddenInstanceStatus)) { // 实例状态与覆盖状态不一致
                     logger.info(
                             "The instance status {} is different from overridden instance status {} for instance {}. "
                                     + "Hence setting the status to overridden status", instanceInfo.getStatus().name(),
                                     instanceInfo.getOverriddenStatus().name(),
                                     instanceInfo.getId());
-                    instanceInfo.setStatusWithoutDirty(overriddenInstanceStatus);
+                    instanceInfo.setStatusWithoutDirty(overriddenInstanceStatus); // 强行把实例的覆盖状态设为实例状态
 
                 }
             }
             renewsLastMin.increment();
-            leaseToRenew.renew();
+            leaseToRenew.renew(); // 续租（设置lastUpdateTimestamp(租约最后更新时间)）
             return true;
         }
     }

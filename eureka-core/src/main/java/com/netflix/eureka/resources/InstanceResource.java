@@ -88,17 +88,22 @@ public class InstanceResource {
     }
 
     /**
+     * 接收EurekaClient端发送的续租(心跳)请求
+     * 也有可能是接收其他EurekaServer端同步数据的请求
      * A put request for renewing lease from a client instance.
      *
      * @param isReplication
      *            a header parameter containing information whether this is
      *            replicated from other nodes.
      * @param overriddenStatus
-     *            overridden status if any.
+     *            overridden status if any
+     *            实例的覆盖状态.
      * @param status
-     *            the {@link InstanceStatus} of the instance.
+     *            the {@link InstanceStatus} of the instance
+     *            实例状态.
      * @param lastDirtyTimestamp
-     *            last timestamp when this instance information was updated.
+     *            last timestamp when this instance information was updated
+     *            实例信息在EurekClient端上次被修改的时间.
      * @return response indicating whether the operation was a success or
      *         failure.
      */
@@ -109,10 +114,10 @@ public class InstanceResource {
             @QueryParam("status") String status,
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
         boolean isFromReplicaNode = "true".equals(isReplication);
-        boolean isSuccess = registry.renew(app.getName(), id, isFromReplicaNode);
+        boolean isSuccess = registry.renew(app.getName(), id, isFromReplicaNode); // 续租（心跳）
 
         // Not found in the registry, immediately ask for a register
-        if (!isSuccess) {
+        if (!isSuccess) { // 续租失败，返回404，EurekaClient端收到404后会发起注册请求
             logger.warn("Not Found (Renew): {} - {}", app.getName(), id);
             return Response.status(Status.NOT_FOUND).build();
         }
@@ -120,7 +125,7 @@ public class InstanceResource {
         // instance might have changed some value
         Response response = null;
         if (lastDirtyTimestamp != null && serverConfig.shouldSyncWhenTimestampDiffers()) {
-            response = this.validateDirtyTimestamp(Long.valueOf(lastDirtyTimestamp), isFromReplicaNode);
+            response = this.validateDirtyTimestamp(Long.valueOf(lastDirtyTimestamp), isFromReplicaNode); // 验证传入的lastDirtyTimestamp和EurekaServer端保存的lastDirtyTimestamp是否相同
             // Store the overridden status since the validation found out the node that replicates wins
             if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()
                     && (overriddenStatus != null)
@@ -129,7 +134,7 @@ public class InstanceResource {
                 registry.storeOverriddenStatusIfRequired(app.getAppName(), id, InstanceStatus.valueOf(overriddenStatus));
             }
         } else {
-            response = Response.ok().build();
+            response = Response.ok().build(); // 续约成功，返回200
         }
         logger.debug("Found (Renew): {} - {}; reply status={}", app.getName(), id, response.getStatus());
         return response;
