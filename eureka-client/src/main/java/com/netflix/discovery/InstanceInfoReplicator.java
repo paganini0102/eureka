@@ -85,18 +85,18 @@ class InstanceInfoReplicator implements Runnable {
                 public void run() {
                     logger.debug("Executing on-demand update of local InstanceInfo");
 
-                    Future latestPeriodic = scheduledPeriodicRef.get(); // 取消任务
-                    if (latestPeriodic != null && !latestPeriodic.isDone()) {
+                    Future latestPeriodic = scheduledPeriodicRef.get(); // 取出之前已经提交的任务
+                    if (latestPeriodic != null && !latestPeriodic.isDone()) { // 如果此任务未完成，就立即取消
                         logger.debug("Canceling the latest scheduled update, it will be rescheduled at the end of on demand update");
                         latestPeriodic.cancel(false);
                     }
 
-                    InstanceInfoReplicator.this.run(); // 再次调用
+                    InstanceInfoReplicator.this.run(); // 通过调用run方法，令任务在延时后执行，相当于周期性任务中的一次
                 }
             });
             return true;
         } else {
-            logger.warn("Ignoring onDemand update due to rate limiter");
+            logger.warn("Ignoring onDemand update due to rate limiter"); // 如果超过了设置的频率限制，本次onDemandUpdate方法就提交任务了
             return false;
         }
     }

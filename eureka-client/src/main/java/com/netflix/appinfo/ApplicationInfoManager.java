@@ -193,6 +193,7 @@ public class ApplicationInfoManager {
     }
 
     /**
+     * 刷新数据中心相关信息
      * Refetches the hostname to check if it has changed. If it has, the entire
      * <code>DataCenterInfo</code> is refetched and passed on to the eureka
      * server on next heartbeat.
@@ -223,6 +224,9 @@ public class ApplicationInfoManager {
         }
     }
 
+    /**
+     * 刷新租约相关信息
+     */
     public void refreshLeaseInfoIfRequired() {
         LeaseInfo leaseInfo = instanceInfo.getLeaseInfo();
         if (leaseInfo == null) {
@@ -230,6 +234,7 @@ public class ApplicationInfoManager {
         }
         int currentLeaseDuration = config.getLeaseExpirationDurationInSeconds();
         int currentLeaseRenewal = config.getLeaseRenewalIntervalInSeconds();
+        // 租约过期时间改变或者租约续约频率改变
         if (leaseInfo.getDurationInSecs() != currentLeaseDuration || leaseInfo.getRenewalIntervalInSecs() != currentLeaseRenewal) {
             LeaseInfo newLeaseInfo = LeaseInfo.Builder.newBuilder()
                     .setRenewalIntervalInSecs(currentLeaseRenewal)
