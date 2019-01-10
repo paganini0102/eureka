@@ -361,7 +361,7 @@ public class ResponseCacheImpl implements ResponseCache {
                     readOnlyCacheMap.put(key, payload);
                 }
             } else {
-                payload = readWriteCacheMap.get(key);
+                payload = readWriteCacheMap.get(key); // 不允许使用只读缓存，读取readWriteCacheMap
             }
         } catch (Throwable t) {
             logger.error("Cannot get value for key : {}", key, t);
