@@ -191,21 +191,21 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      */
     public void register(InstanceInfo registrant, int leaseDuration, boolean isReplication) {
         try {
-            read.lock();
+            read.lock(); // 获取读锁
             Map<String, Lease<InstanceInfo>> gMap = registry.get(registrant.getAppName());
-            REGISTER.increment(isReplication);
-            if (gMap == null) {
+            REGISTER.increment(isReplication); // 增加注册次数到监控
+            if (gMap == null) { // 获得应用实例信息对应的租约
                 final ConcurrentHashMap<String, Lease<InstanceInfo>> gNewMap = new ConcurrentHashMap<String, Lease<InstanceInfo>>();
-                gMap = registry.putIfAbsent(registrant.getAppName(), gNewMap);
-                if (gMap == null) {
+                gMap = registry.putIfAbsent(registrant.getAppName(), gNewMap);  // 添加应用
+                if (gMap == null) { // 添加应用成功
                     gMap = gNewMap;
                 }
             }
             Lease<InstanceInfo> existingLease = gMap.get(registrant.getId());
             // Retain the last dirty timestamp without overwriting it, if there is already a lease
-            if (existingLease != null && (existingLease.getHolder() != null)) {
-                Long existingLastDirtyTimestamp = existingLease.getHolder().getLastDirtyTimestamp();
-                Long registrationLastDirtyTimestamp = registrant.getLastDirtyTimestamp();
+            if (existingLease != null && (existingLease.getHolder() != null)) { // 已存在时，使用数据不一致的时间大的应用注册信息为有效的
+                Long existingLastDirtyTimestamp = existingLease.getHolder().getLastDirtyTimestamp(); // Server注册的InstanceInfo
+                Long registrationLastDirtyTimestamp = registrant.getLastDirtyTimestamp(); // Client请求的InstanceInfo
                 logger.debug("Existing lease found (existing={}, provided={}", existingLastDirtyTimestamp, registrationLastDirtyTimestamp);
 
                 // this is a > instead of a >= because if the timestamps are equal, we still take the remote transmitted
@@ -218,7 +218,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 }
             } else {
                 // The lease does not exist and hence it is a new registration
-                synchronized (lock) {
+                synchronized (lock) { // 【自我保护机制】增加‘numberOfRenewsPerMinThreshold’、‘expectedNumberOfRenewsPerMin’
                     if (this.expectedNumberOfRenewsPerMin > 0) {
                         // Since the client wants to cancel it, reduce the threshold
                         // (1
@@ -230,18 +230,18 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 }
                 logger.debug("No previous lease information found; it is new registration");
             }
-            Lease<InstanceInfo> lease = new Lease<InstanceInfo>(registrant, leaseDuration);
-            if (existingLease != null) {
+            Lease<InstanceInfo> lease = new Lease<InstanceInfo>(registrant, leaseDuration); // 创建租约
+            if (existingLease != null) { // 若租约已存在，设置租约的开始服务的时间戳
                 lease.setServiceUpTimestamp(existingLease.getServiceUpTimestamp());
             }
-            gMap.put(registrant.getId(), lease);
-            synchronized (recentRegisteredQueue) {
+            gMap.put(registrant.getId(), lease); // 添加到 租约映射
+            synchronized (recentRegisteredQueue) { // 添加到 最近注册的调试队列
                 recentRegisteredQueue.add(new Pair<Long, String>(
                         System.currentTimeMillis(),
                         registrant.getAppName() + "(" + registrant.getId() + ")"));
             }
             // This is where the initial state transfer of overridden status happens
-            if (!InstanceStatus.UNKNOWN.equals(registrant.getOverriddenStatus())) {
+            if (!InstanceStatus.UNKNOWN.equals(registrant.getOverriddenStatus())) { // 添加到应用实例覆盖状态映射（Eureka-Server初始化使用）
                 logger.debug("Found overridden status {} for instance {}. Checking to see if needs to be add to the "
                                 + "overrides", registrant.getOverriddenStatus(), registrant.getId());
                 if (!overriddenInstanceStatusMap.containsKey(registrant.getId())) {
@@ -249,28 +249,28 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                     overriddenInstanceStatusMap.put(registrant.getId(), registrant.getOverriddenStatus());
                 }
             }
-            InstanceStatus overriddenStatusFromMap = overriddenInstanceStatusMap.get(registrant.getId());
+            InstanceStatus overriddenStatusFromMap = overriddenInstanceStatusMap.get(registrant.getId()); // 设置应用实例覆盖状态
             if (overriddenStatusFromMap != null) {
                 logger.info("Storing overridden status {} from map", overriddenStatusFromMap);
                 registrant.setOverriddenStatus(overriddenStatusFromMap);
             }
 
             // Set the status based on the overridden status rules
-            InstanceStatus overriddenInstanceStatus = getOverriddenInstanceStatus(registrant, existingLease, isReplication);
-            registrant.setStatusWithoutDirty(overriddenInstanceStatus);
+            InstanceStatus overriddenInstanceStatus = getOverriddenInstanceStatus(registrant, existingLease, isReplication); // 获得应用实例状态
+            registrant.setStatusWithoutDirty(overriddenInstanceStatus); // 设置应用实例状态
 
             // If the lease is registered with UP status, set lease service up timestamp
-            if (InstanceStatus.UP.equals(registrant.getStatus())) {
+            if (InstanceStatus.UP.equals(registrant.getStatus())) { // 设置租约的开始服务的时间戳（只有第一次有效）
                 lease.serviceUp();
             }
-            registrant.setActionType(ActionType.ADDED);
-            recentlyChangedQueue.add(new RecentlyChangedItem(lease));
-            registrant.setLastUpdatedTimestamp();
-            invalidateCache(registrant.getAppName(), registrant.getVIPAddress(), registrant.getSecureVipAddress());
+            registrant.setActionType(ActionType.ADDED); // 设置应用实例信息的操作类型为添加
+            recentlyChangedQueue.add(new RecentlyChangedItem(lease)); // 添加到最近租约变更记录队列
+            registrant.setLastUpdatedTimestamp(); // 设置租约的最后更新时间戳
+            invalidateCache(registrant.getAppName(), registrant.getVIPAddress(), registrant.getSecureVipAddress()); // 设置响应缓存过期
             logger.info("Registered instance {}/{} with status {} (replication={})",
                     registrant.getAppName(), registrant.getId(), registrant.getStatus(), isReplication);
         } finally {
-            read.unlock();
+            read.unlock(); // 释放锁
         }
     }
 
