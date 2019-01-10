@@ -95,6 +95,7 @@ public class ApplicationsResource {
     }
 
     /**
+     * 接收EurekaClient端发送的获取全量注册信息请求
      * Get information about all {@link com.netflix.discovery.shared.Applications}.
      *
      * @param version the version of the request.
