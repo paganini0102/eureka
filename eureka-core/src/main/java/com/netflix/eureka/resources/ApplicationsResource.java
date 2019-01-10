@@ -131,24 +131,24 @@ public class ApplicationsResource {
         // Check if the server allows the access to the registry. The server can
         // restrict access if it is not
         // ready to serve traffic depending on various reasons.
-        if (!registry.shouldAllowAccess(isRemoteRegionRequested)) {
+        if (!registry.shouldAllowAccess(isRemoteRegionRequested)) { // EurekaServer无法提供服务，返回403
             return Response.status(Status.FORBIDDEN).build();
         }
         CurrentRequestVersion.set(Version.toEnum(version));
-        KeyType keyType = Key.KeyType.JSON;
+        KeyType keyType = Key.KeyType.JSON; // 设置返回数据格式，默认JSON
         String returnMediaType = MediaType.APPLICATION_JSON;
         if (acceptHeader == null || !acceptHeader.contains(HEADER_JSON_VALUE)) {
-            keyType = Key.KeyType.XML;
+            keyType = Key.KeyType.XML; // 如果接收到的请求头部没有具体格式信息，则返回格式为XML
             returnMediaType = MediaType.APPLICATION_XML;
         }
 
         Key cacheKey = new Key(Key.EntityType.Application,
                 ResponseCacheImpl.ALL_APPS,
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions
-        );
+        ); // 构建缓存键
 
-        Response response;
-        if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) {
+        Response response; // 根据缓存键读取缓存
+        if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) { // 返回不同的编码类型的数据，去缓存中取数据的方法基本一致
             response = Response.ok(responseCache.getGZIP(cacheKey))
                     .header(HEADER_CONTENT_ENCODING, HEADER_GZIP_VALUE)
                     .header(HEADER_CONTENT_TYPE, returnMediaType)

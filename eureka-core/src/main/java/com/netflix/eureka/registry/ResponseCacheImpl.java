@@ -344,7 +344,15 @@ public class ResponseCacheImpl implements ResponseCache {
     Value getValue(final Key key, boolean useReadOnlyCache) {
         Value payload = null;
         try {
-            if (useReadOnlyCache) {
+            if (useReadOnlyCache) { // 默认为true，允许使用只读缓存
+                /**
+                 * 先从readOnlyCacheMap读取
+                 * 若读不到，则从readWriteCacheMap读取，并将结果存入readOnlyCacheMap
+                 * 缓存设计成了两级，请求进来的时候先读readOnlyCacheMap，读不到再从readWriteCacheMap读取
+                 * readWriteCacheMap里再读不到，则从registry里读
+                 * readOnlyCacheMap是一个ConcurrentMap
+                 * readWriteCacheMap是一个LoadingCache
+                 */
                 final Value currentPayload = readOnlyCacheMap.get(key);
                 if (currentPayload != null) {
                     payload = currentPayload;
