@@ -580,6 +580,10 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         evict(0l);
     }
 
+    /**
+     * 执行清理过期租约逻辑
+     * @param additionalLeaseMs
+     */
     public void evict(long additionalLeaseMs) {
         logger.debug("Running the evict task");
 
@@ -591,7 +595,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         // We collect first all expired items, to evict them in random order. For large eviction sets,
         // if we do not that, we might wipe out whole apps before self preservation kicks in. By randomizing it,
         // the impact should be evenly distributed across all applications.
-        List<Lease<InstanceInfo>> expiredLeases = new ArrayList<>();
+        List<Lease<InstanceInfo>> expiredLeases = new ArrayList<>(); // 获得所有过期的租约
         for (Entry<String, Map<String, Lease<InstanceInfo>>> groupEntry : registry.entrySet()) {
             Map<String, Lease<InstanceInfo>> leaseMap = groupEntry.getValue();
             if (leaseMap != null) {
@@ -606,15 +610,15 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
         // To compensate for GC pauses or drifting local time, we need to use current registry size as a base for
         // triggering self-preservation. Without that we would wipe out full registry.
-        int registrySize = (int) getLocalRegistrySize();
+        int registrySize = (int) getLocalRegistrySize(); //  计算最大允许清理租约数量
         int registrySizeThreshold = (int) (registrySize * serverConfig.getRenewalPercentThreshold());
         int evictionLimit = registrySize - registrySizeThreshold;
 
-        int toEvict = Math.min(expiredLeases.size(), evictionLimit);
+        int toEvict = Math.min(expiredLeases.size(), evictionLimit); // 计算清理租约数量
         if (toEvict > 0) {
             logger.info("Evicting {} items (expired={}, evictionLimit={})", toEvict, expiredLeases.size(), evictionLimit);
 
-            Random random = new Random(System.currentTimeMillis());
+            Random random = new Random(System.currentTimeMillis()); // 逐个过期
             for (int i = 0; i < toEvict; i++) {
                 // Pick a random item (Knuth shuffle algorithm)
                 int next = i + random.nextInt(expiredLeases.size() - i);
@@ -1213,7 +1217,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     protected void postInit() {
         renewsLastMin.start();
-        if (evictionTaskRef.get() != null) {
+        if (evictionTaskRef.get() != null) { // 初始化清理租约过期任务
             evictionTaskRef.get().cancel();
         }
         evictionTaskRef.set(new EvictionTask());
@@ -1238,15 +1242,15 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     }
 
     /* visible for testing */ class EvictionTask extends TimerTask {
-
+        /** 最后任务执行时间 */
         private final AtomicLong lastExecutionNanosRef = new AtomicLong(0l);
 
         @Override
         public void run() {
             try {
-                long compensationTimeMs = getCompensationTimeMs();
+                long compensationTimeMs = getCompensationTimeMs(); // 获取补偿时间毫秒数
                 logger.info("Running the evict task with compensationTime {}ms", compensationTimeMs);
-                evict(compensationTimeMs);
+                evict(compensationTimeMs); // 清理过期租约逻辑
             } catch (Throwable e) {
                 logger.error("Could not run the evict task", e);
             }
