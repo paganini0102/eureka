@@ -932,6 +932,7 @@ public class DiscoveryClient implements EurekaClient {
     }
 
     /**
+     * 拉取注册信息
      * Fetches the registry information.
      *
      * <p>
@@ -949,9 +950,10 @@ public class DiscoveryClient implements EurekaClient {
         try {
             // If the delta is disabled or if it is the first time, get all
             // applications
-            Applications applications = getApplications();
+            Applications applications = getApplications(); // 获取本地缓存的注册信息
 
-            if (clientConfig.shouldDisableDelta()
+            // 全量获取
+            if (clientConfig.shouldDisableDelta() // 默认为false
                     || (!Strings.isNullOrEmpty(clientConfig.getRegistryRefreshSingleVipAddress()))
                     || forceFullRegistryFetch
                     || (applications == null)
@@ -965,12 +967,12 @@ public class DiscoveryClient implements EurekaClient {
                 logger.info("Registered Applications size is zero : {}",
                         (applications.getRegisteredApplications().size() == 0));
                 logger.info("Application version is -1: {}", (applications.getVersion() == -1));
-                getAndStoreFullRegistry();
+                getAndStoreFullRegistry(); // 全量获取注册信息并存到本地缓存
             } else {
-                getAndUpdateDelta(applications);
+                getAndUpdateDelta(applications); // 差别获取
             }
             applications.setAppsHashCode(applications.getReconcileHashCode());
-            logTotalInstances();
+            logTotalInstances(); // 打印EurekaClient端保存的注册信息的数量
         } catch (Throwable e) {
             logger.error(PREFIX + "{} - was unable to refresh its cache! status = {}", appPathIdentifier, e.getMessage(), e);
             return false;
@@ -1033,6 +1035,7 @@ public class DiscoveryClient implements EurekaClient {
     }
 
     /**
+     * 全量获取注册信息并存到本地缓存
      * Gets the full registry information from the eureka server and stores it locally.
      * When applying the full registry, the following flow is observed:
      *
@@ -1050,6 +1053,7 @@ public class DiscoveryClient implements EurekaClient {
         logger.info("Getting all instance registry info from the eureka server");
 
         Applications apps = null;
+        // 调用到EurekaServer的ApplicationsResource-getContainers()方法全量获取注册信息
         EurekaHttpResponse<Applications> httpResponse = clientConfig.getRegistryRefreshSingleVipAddress() == null
                 ? eurekaTransport.queryClient.getApplications(remoteRegionsRef.get())
                 : eurekaTransport.queryClient.getVip(clientConfig.getRegistryRefreshSingleVipAddress(), remoteRegionsRef.get());
@@ -1058,11 +1062,15 @@ public class DiscoveryClient implements EurekaClient {
         }
         logger.info("The response status is {}", httpResponse.getStatusCode());
 
-        if (apps == null) {
+        if (apps == null) { // 设置缓存
             logger.error("The application is null for some reason. Not storing this information");
         } else if (fetchRegistryGeneration.compareAndSet(currentUpdateGeneration, currentUpdateGeneration + 1)) {
+            /**
+             * 对注册信息进行过滤，过滤后只缓存服务状态为UP的实例
+             * 本地缓存数据结构为AtomicReference<Applications>
+             */
             localRegionApps.set(this.filterAndShuffle(apps));
-            logger.debug("Got full registry with apps hashcode {}", apps.getAppsHashCode());
+            logger.debug("Got full registry with apps hashcode {}", apps.getAppsHashCode()); // 打印过滤后实例的哈希值
         } else {
             logger.warn("Not updating applications as another thread is updating it already");
         }
