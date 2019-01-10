@@ -1111,10 +1111,14 @@ public class DiscoveryClient implements EurekaClient {
         } else if (fetchRegistryGeneration.compareAndSet(currentUpdateGeneration, currentUpdateGeneration + 1)) {
             logger.debug("Got delta update with apps hashcode {}", delta.getAppsHashCode());
             String reconcileHashCode = "";
+            /**
+             * 合并注册信息时要加锁
+             * 拉取注册信息是从每个EurekaClient发起的如果定时30秒获取一次的话应该没有并发
+             */
             if (fetchRegistryUpdateLock.tryLock()) {
                 try {
-                    updateDelta(delta);
-                    reconcileHashCode = getReconcileHashCode(applications);
+                    updateDelta(delta); // 差别获取的注册信息与本地缓存的注册信息进行合并
+                    reconcileHashCode = getReconcileHashCode(applications); // 本地注册信息一致哈希值
                 } finally {
                     fetchRegistryUpdateLock.unlock();
                 }
@@ -1122,7 +1126,7 @@ public class DiscoveryClient implements EurekaClient {
                 logger.warn("Cannot acquire update lock, aborting getAndUpdateDelta");
             }
             // There is a diff in number of instances for some reason
-            if (!reconcileHashCode.equals(delta.getAppsHashCode()) || clientConfig.shouldLogDeltaDiff()) {
+            if (!reconcileHashCode.equals(delta.getAppsHashCode()) || clientConfig.shouldLogDeltaDiff()) { // 本地注册信息和Eureka Server的注册信息是否一致
                 reconcileAndLogDifference(delta, reconcileHashCode);  // this makes a remoteCall
             }
         } else {
